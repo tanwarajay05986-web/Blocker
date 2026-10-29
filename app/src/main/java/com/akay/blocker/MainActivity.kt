@@ -1,6 +1,9 @@
 package com.akay.blocker
 
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
@@ -140,8 +143,8 @@ class MainActivity : ComponentActivity() {
         }
         val on = pill("TURN ON", true) {
             Store.setDiscSeen(true)
-            Perm.openAccessibility(this)
             render()
+            accGuide()
         }
         btns.addView(skip, LinearLayout.LayoutParams(0, dp(52), 1f).also { it.rightMargin = dp(14) })
         btns.addView(on, LinearLayout.LayoutParams(0, dp(52), 1.4f))
@@ -358,7 +361,7 @@ class MainActivity : ComponentActivity() {
             }
             Store.set(key, true)
             t.on = true
-            if (!Perm.accEnabled(this)) toast("Turn on the Accessibility permission first")
+            if (!Perm.accEnabled(this)) accGuide()
         } else {
             Gate.ask(this) {
                 if (key == "uninstall") Perm.removeAdmin(this)
@@ -384,7 +387,7 @@ class MainActivity : ComponentActivity() {
         card.addView(head, LinearLayout.LayoutParams(MP, WC))
 
         card.addView(permRow("Accessibility service", "Needed to find and block content", Perm.accEnabled(this)) {
-            Perm.openAccessibility(this)
+            accGuide()
         }, LinearLayout.LayoutParams(MP, WC))
         card.addView(permRow("Display over other apps", "Needed to show the blocked screen", Perm.overlayOk(this)) {
             Perm.openOverlay(this)
@@ -470,6 +473,30 @@ class MainActivity : ComponentActivity() {
             bar.addView(item, LinearLayout.LayoutParams(0, WC, 1f))
         }
         return bar
+    }
+
+    private fun openAppInfo() {
+        try {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+        } catch (e: Throwable) {
+            toast("Cannot open App info")
+        }
+    }
+
+    // steps to turn on the Accessibility service on a phone that blocks it
+    private fun accGuide() {
+        val name = getString(R.string.app_name)
+        AlertDialog.Builder(this)
+            .setTitle("Turn on Accessibility")
+            .setMessage(
+                "Step 1: Agar \"App was denied access\" aaye, to App info kholo, upar 3 dots dabao aur " +
+                    "\"Allow restricted settings\" chuno.\n\n" +
+                    "Step 2: Accessibility kholo, Downloaded apps me $name chuno aur On karo."
+            )
+            .setNeutralButton("App info") { _, _ -> openAppInfo() }
+            .setPositiveButton("Accessibility") { _, _ -> Perm.openAccessibility(this) }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun say(title: String, msg: String) {
