@@ -132,12 +132,12 @@ class BlockService : AccessibilityService() {
         }
         when (pkg) {
             "com.google.android.youtube" ->
-                if (Store.on("ytshorts") && hasId(root, "reel_recycler", "reel_player_page_container", "reel_watch_fragment")) {
+                if (Store.on("ytshorts") && ytShorts(root)) {
                     block(false)
                     return
                 }
             "com.instagram.android" ->
-                if (Store.on("igreels") && hasId(root, "clips_viewer")) {
+                if (Store.on("igreels") && igReels(root)) {
                     block(false)
                     return
                 }
@@ -204,6 +204,36 @@ class BlockService : AccessibilityService() {
         }
         return false
     }
+
+    private fun ytShorts(root: AccessibilityNodeInfo): Boolean =
+        find(root) { n ->
+            val id = n.viewIdResourceName
+            if (id != null && (id.contains("reel_recycler") || id.contains("reel_player") ||
+                    id.contains("reel_watch_fragment") || id.contains("shorts_player"))
+            ) {
+                true
+            } else if (n.isSelected) {
+                val t = (n.contentDescription ?: n.text ?: "").toString().lowercase()
+                t == "shorts" || t.startsWith("shorts,")
+            } else {
+                false
+            }
+        }
+
+    private fun igReels(root: AccessibilityNodeInfo): Boolean =
+        find(root) { n ->
+            val id = n.viewIdResourceName
+            if (id != null && (id.contains("clips_viewer") || id.contains("clips_swipe_refresh") ||
+                    id.contains("root_clips_layout"))
+            ) {
+                true
+            } else if (n.isSelected) {
+                val t = (n.contentDescription ?: n.text ?: "").toString().lowercase()
+                (id != null && id.contains("clips_tab")) || t == "reels" || t.startsWith("reels,")
+            } else {
+                false
+            }
+        }
 
     private fun snapScreen(root: AccessibilityNodeInfo): Boolean =
         find(root) { n ->
