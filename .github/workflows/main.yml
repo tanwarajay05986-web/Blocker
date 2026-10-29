@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -24,15 +24,23 @@ jobs:
         run: yes | sdkmanager --licenses > /dev/null || true
 
       - name: Build debug APK
-        run: gradle assembleDebug --console=plain 2>&1 | tee build.log
-
-      - name: Show errors
-        if: failure()
+        shell: bash
         run: |
-          echo "===== ERRORS ====="
-          grep -E "^e: |error:|AAPT|Unresolved|Redeclaration" build.log | head -40 || true
-          echo "===== WHAT WENT WRONG ====="
-          grep -A8 "What went wrong" build.log || true
+          set +e
+          gradle assembleDebug --console=plain > build.log 2>&1
+          code=$?
+          tail -n 60 build.log
+          if [ $code -ne 0 ]; then
+            {
+              echo "## Build errors"
+              echo '```'
+              grep -E "^e: |error:|Unresolved reference|Redeclaration" build.log | head -30
+              grep -A12 "What went wrong" build.log | head -30
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            grep -E "^e: " build.log | head -10 | while IFS= read -r line; do echo "::error::${line}"; done
+          fi
+          exit $code
 
       - uses: actions/upload-artifact@v4
         with:
